@@ -1,4 +1,4 @@
-"""Interface desktop com CustomTkinter para o sistema ICMS-PI (ATC, NORMAL, DIFAL)."""
+"""Interface desktop com CustomTkinter para o sistema ICMS-PI (ATC, Normal, DIFAL). Exibe Valor ATC e DIF. ALIQUOTA."""
 
 import asyncio
 import sys
@@ -17,7 +17,7 @@ from icms_pi.excel_filiais import (
 )
 from icms_pi.logger import configurar_logger_da_aplicacao
 from atc.automacao_sefaz_pi import AutomacaoAntecipacaoParcialPI, _valor_atc_invalido
-
+from difal.automacao_sefaz_pi import AutomacaoDifalPI, _valor_difal_invalido
 
 logger = configurar_logger_da_aplicacao(__name__)
 
@@ -29,6 +29,14 @@ PROCESSOS_ICMS_PI: list[tuple[str, str]] = [
 ]
 
 _PROCESSO_POR_ID: dict[str, str] = {pid: nome for pid, nome in PROCESSOS_ICMS_PI}
+
+# Rótulos curtos para o seletor de lista (mesmo tamanho visual)
+_PID_PARA_LABEL_CURTO: dict[str, str] = {
+    "antecipado": "ATC",
+    "normal": "Normal",
+    "difal": "DIFAL",
+}
+_LABEL_CURTO_PARA_PID: dict[str, str] = {v: k for k, v in _PID_PARA_LABEL_CURTO.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -54,11 +62,25 @@ def _formato_intervalo_ms(ms: int) -> str:
     return f"{ms} ms"
 
 
+def _item_executavel_para_processo(item: dict[str, object], processo_id: str) -> bool:
+    """Retorna True se o item tem valor válido para o processo (antecipado=ATC, difal=DIF. ALIQUOTA)."""
+    if processo_id == "antecipado":
+        return not _valor_atc_invalido(item.get("valor_atc"))
+    if processo_id == "difal":
+        return not _valor_difal_invalido(item.get("valor_difal"))
+    return False
+
+
 def _contar_executaveis_ignoradas(
     lista_dados: list[dict[str, object]],
+    processos_ids: list[str] | None = None,
 ) -> tuple[int, int]:
+    """Conta executáveis (com valor válido para pelo menos um dos processos) e ignoradas."""
+    if not processos_ids:
+        processos_ids = ["antecipado"]
     executaveis = sum(
-        1 for item in lista_dados if not _valor_atc_invalido(item.get("valor_atc"))
+        1 for item in lista_dados
+        if any(_item_executavel_para_processo(item, pid) for pid in processos_ids)
     )
     return executaveis, len(lista_dados) - executaveis
 
@@ -72,15 +94,33 @@ def _executar_lote_em_background(
     processos_ids: list[str],
     headless: bool,
     result_callback=None,
+    lista_por_processo: dict[str, list[dict[str, object]]] | None = None,
 ) -> None:
     if not processos_ids:
         return
 
-    total = len(lista_dados)
+    # Se lista_por_processo foi passada (modo 3 listas), usa ela; senão filtra por valor
+    if lista_por_processo is None:
+        lista_por_processo = {}
+        for pid in processos_ids:
+            if pid == "antecipado":
+                lista_por_processo[pid] = [
+                    item for item in lista_dados
+                    if not _valor_atc_invalido(item.get("valor_atc"))
+                ]
+            elif pid == "difal":
+                lista_por_processo[pid] = [
+                    item for item in lista_dados
+                    if not _valor_difal_invalido(item.get("valor_difal"))
+                ]
+            elif pid == "normal":
+                lista_por_processo[pid] = []  # sem automação Normal ainda
+
+    total = sum(len(lista_por_processo.get(pid, [])) for pid in processos_ids)
     intervalo_txt = _formato_intervalo_ms(configuracoes.INTERVALO_ENTRE_EXECUCOES_MS)
     logger.info(
-        "Iniciando lote: %d registros, processos=%s, intervalo=%s, headless=%s",
-        total, processos_ids, intervalo_txt, headless,
+        "Iniciando lote: processos=%s, total itens=%s, intervalo=%s, headless=%s",
+        processos_ids, total, intervalo_txt, headless,
     )
 
     def _worker() -> None:
@@ -91,14 +131,25 @@ def _executar_lote_em_background(
             ies_ok: list[str] = []
             ies_erro: list[tuple[str, str]] = []
 
-            async def _rodar_antecipado() -> None:
-                automacao = AutomacaoAntecipacaoParcialPI(headless=headless)
-                ok, erro = await automacao.executar_fluxo_por_ie_pi(lista_dados)
-                ies_ok.extend(ok)
-                ies_erro.extend(erro)
-
             if "antecipado" in processos_ids:
-                loop.run_until_complete(_rodar_antecipado())
+                lista_atc = lista_por_processo.get("antecipado", [])
+                if lista_atc:
+                    async def _rodar_antecipado() -> None:
+                        automacao = AutomacaoAntecipacaoParcialPI(headless=headless)
+                        ok, erro = await automacao.executar_fluxo_por_ie_pi(lista_atc)
+                        ies_ok.extend(ok)
+                        ies_erro.extend(erro)
+                    loop.run_until_complete(_rodar_antecipado())
+
+            if "difal" in processos_ids:
+                lista_difal = lista_por_processo.get("difal", [])
+                if lista_difal:
+                    async def _rodar_difal() -> None:
+                        automacao = AutomacaoDifalPI(headless=headless)
+                        ok, erro = await automacao.executar_fluxo_por_ie_pi(lista_difal)
+                        ies_ok.extend(ok)
+                        ies_erro.extend(erro)
+                    loop.run_until_complete(_rodar_difal())
 
             if result_callback is not None:
                 result_callback(ies_ok, ies_erro)
@@ -211,6 +262,9 @@ class App(ctk.CTk):
 
         self._modo_ies = self._MODO_TABELA
         self._vars_selecao: list[tuple[dict[str, object], ctk.BooleanVar]] = []
+        # Modo 3 listas: qual processo está em edição e seleção por processo
+        self._processo_selecao_visivel: str = "antecipado"
+        self._selecao_por_processo: dict[str, list[tuple[dict[str, object], ctk.BooleanVar]]] = {}
 
         self._construir_layout()
 
@@ -354,36 +408,38 @@ class App(ctk.CTk):
         )
         self._textbox_ies.grid(**_GRID_CONTEUDO)
 
-        # Modo seleção (scrollable frame + barra de ações)
+        # Modo seleção: seletor de processo + uma lista por vez (3 listas)
         self._container_selecao = ctk.CTkFrame(self._frame_ies, fg_color="transparent")
         self._container_selecao.grid_columnconfigure(0, weight=1)
-        self._container_selecao.grid_rowconfigure(0, weight=1)
+        self._container_selecao.grid_rowconfigure(1, weight=1)
         self._container_selecao.grid(**_GRID_CONTEUDO)
         self._container_selecao.grid_remove()
 
         self._grid_conteudo = _GRID_CONTEUDO
 
-        self._frame_scroll_ies = ctk.CTkScrollableFrame(self._container_selecao)
-        self._frame_scroll_ies.grid(row=0, column=0, sticky="nsew", padx=4, pady=(4, 0))
-
-        barra_selecao = ctk.CTkFrame(self._container_selecao, fg_color="transparent")
-        barra_selecao.grid(row=1, column=0, sticky="ew", padx=4, pady=(4, 6))
-
-        ctk.CTkButton(
-            barra_selecao, text="Selecionar todas", width=140, height=28,
-            font=ctk.CTkFont(size=11), command=self._marcar_todas_ies,
-        ).pack(side="left", padx=(0, 6))
-
-        ctk.CTkButton(
-            barra_selecao, text="Desmarcar todas", width=130, height=28,
-            font=ctk.CTkFont(size=11), command=self._desmarcar_todas_ies,
-        ).pack(side="left", padx=(0, 6))
-
-        self._lbl_contador_selecao = ctk.CTkLabel(
-            barra_selecao, text="Selecionadas: 0",
+        # Linha 0: seletor "Lista do processo:" — só processos marcados no painel Processos; rótulos curtos
+        frame_selector = ctk.CTkFrame(self._container_selecao, fg_color="transparent")
+        frame_selector.grid(row=0, column=0, sticky="ew", padx=4, pady=(4, 2))
+        frame_selector.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            frame_selector, text="Lista do processo:",
             font=ctk.CTkFont(size=11), text_color="gray",
-        )
-        self._lbl_contador_selecao.pack(side="left", padx=8)
+        ).grid(row=0, column=0, sticky="w", padx=(0, 8))
+        self._var_processo_selecao = ctk.StringVar(value="ATC")
+        self._frame_seletor_botoes = ctk.CTkFrame(frame_selector, fg_color="transparent")
+        self._frame_seletor_botoes.grid(row=0, column=1, sticky="w")
+        self._segmented_processos: ctk.CTkSegmentedButton | None = None
+
+        # Linha 1: container das 3 listas (só uma visível por vez)
+        self._container_listas = ctk.CTkFrame(self._container_selecao, fg_color="transparent")
+        self._container_listas.grid(row=1, column=0, sticky="nsew", padx=4, pady=(0, 4))
+        self._container_listas.grid_columnconfigure(0, weight=1)
+        self._container_listas.grid_rowconfigure(0, weight=1)
+        # Frames por processo (preenchidos ao entrar no modo seleção)
+        self._frame_lista_por_processo: dict[str, ctk.CTkFrame] = {}
+        self._frame_scroll_por_processo: dict[str, ctk.CTkScrollableFrame] = {}
+        self._barra_por_processo: dict[str, ctk.CTkFrame] = {}
+        self._lbl_contador_por_processo: dict[str, ctk.CTkLabel] = {}
 
     # --- Painel de processos + executar ---
     def _criar_painel_processos(self, parent: ctk.CTkFrame) -> None:
@@ -403,11 +459,9 @@ class App(ctk.CTk):
         for pid, nome in PROCESSOS_ICMS_PI:
             var = ctk.BooleanVar(value=(pid == "antecipado"))
             self._vars_processos[pid] = var
-            habilitado = pid == "antecipado"
+            var.trace_add("write", lambda *_: self._atualizar_resumo_e_tabela_processos())
             cb = ctk.CTkCheckBox(frame, text=nome, variable=var, font=ctk.CTkFont(size=12))
             cb.grid(row=row_idx, column=0, sticky="w", padx=22, pady=2)
-            if not habilitado:
-                cb.configure(state="disabled")
             row_idx += 1
 
         ctk.CTkFrame(frame, height=1).grid(
@@ -507,62 +561,180 @@ class App(ctk.CTk):
         self._textbox_ies.grid_remove()
         self._container_selecao.grid(**self._grid_conteudo)
         self._btn_alternar_modo.configure(text="Ver tabela")
-        self._popular_selecao_ies()
+        self._atualizar_seletor_processos_selecao()
+        self._construir_listas_por_processo()
+        self._mostrar_lista_do_processo(self._processo_selecao_visivel)
 
-    def _popular_selecao_ies(self) -> None:
-        for widget in self._frame_scroll_ies.winfo_children():
-            widget.destroy()
-        self._vars_selecao.clear()
-
-        for item in self._lista_dados:
-            ie = _ie_para_exibicao(item.get("ie") or item.get("ie_digitos") or "")
-            val = item.get("valor_atc")
-            executavel = not _valor_atc_invalido(val)
-            valor_txt = (
-                f"{val:.2f}" if isinstance(val, (int, float))
-                else (str(val) if val is not None else "—")
+    def _atualizar_seletor_processos_selecao(self) -> None:
+        """Mostra no seletor só os processos marcados no painel Processos; rótulos curtos (ATC, Normal, DIFAL)."""
+        processos_ativos = [p for p, var in self._vars_processos.items() if var.get()]
+        if not processos_ativos:
+            processos_ativos = ["antecipado", "normal", "difal"]
+        valores = [_PID_PARA_LABEL_CURTO[pid] for pid in ("antecipado", "normal", "difal") if pid in processos_ativos]
+        if not valores:
+            valores = ["ATC", "Normal", "DIFAL"]
+        for w in self._frame_seletor_botoes.winfo_children():
+            w.destroy()
+        self._segmented_processos = None
+        if valores:
+            atual_label = _PID_PARA_LABEL_CURTO.get(self._processo_selecao_visivel, "ATC")
+            if atual_label not in valores:
+                atual_label = valores[0]
+                self._processo_selecao_visivel = _LABEL_CURTO_PARA_PID.get(atual_label, "antecipado")
+            self._var_processo_selecao.set(atual_label)
+            self._segmented_processos = ctk.CTkSegmentedButton(
+                self._frame_seletor_botoes,
+                values=valores,
+                variable=self._var_processo_selecao,
+                command=self._ao_trocar_processo_selecao,
             )
-            status = "Executável" if executavel else "Ignorada"
+            self._segmented_processos.pack(side="left")
 
-            row = ctk.CTkFrame(self._frame_scroll_ies, fg_color="transparent")
-            row.pack(fill="x", pady=1)
+    def _ao_trocar_processo_selecao(self, valor_segmented: str) -> None:
+        pid = _LABEL_CURTO_PARA_PID.get(valor_segmented, "antecipado")
+        self._processo_selecao_visivel = pid
+        self._mostrar_lista_do_processo(pid)
 
-            var = ctk.BooleanVar(value=executavel)
-            if executavel:
-                cb = ctk.CTkCheckBox(row, text="", variable=var, width=28)
-                cb.pack(side="left", padx=(0, 6), pady=3)
-                self._vars_selecao.append((item, var))
-            else:
-                ctk.CTkLabel(row, text="  —  ", width=36).pack(side="left", padx=(0, 6), pady=3)
-
-            ctk.CTkLabel(
-                row, text=ie,
-                font=ctk.CTkFont(family="Consolas", size=12), width=130,
-            ).pack(side="left", padx=4, pady=3)
-            ctk.CTkLabel(
-                row, text=valor_txt,
-                font=ctk.CTkFont(family="Consolas", size=12), width=100,
-            ).pack(side="left", padx=4, pady=3)
-            ctk.CTkLabel(
-                row, text=status, font=ctk.CTkFont(size=11),
-                text_color="green" if executavel else "gray",
-            ).pack(side="left", padx=4, pady=3)
-
-        for _, var in self._vars_selecao:
-            var.trace_add("write", lambda *_: self._atualizar_contador_selecao())
+    def _mostrar_lista_do_processo(self, pid: str) -> None:
+        for p, frame in self._frame_lista_por_processo.items():
+            frame.grid_remove()
+        if pid in self._frame_lista_por_processo:
+            self._frame_lista_por_processo[pid].grid(row=0, column=0, sticky="nsew")
         self._atualizar_contador_selecao()
 
-    def _marcar_todas_ies(self) -> None:
-        for _, var in self._vars_selecao:
+    def _construir_listas_por_processo(self) -> None:
+        """Cria as 3 listas (ATC, Normal, DIFAL) e preenche cada uma com IEs do processo."""
+        self._selecao_por_processo.clear()
+        for p, frame in self._frame_lista_por_processo.items():
+            frame.destroy()
+        self._frame_lista_por_processo.clear()
+        self._frame_scroll_por_processo.clear()
+        self._barra_por_processo.clear()
+        self._lbl_contador_por_processo.clear()
+
+        for pid in ("antecipado", "normal", "difal"):
+            itens_processo = self._itens_executaveis_para_processo(pid)
+            frame_lista = ctk.CTkFrame(self._container_listas, fg_color="transparent")
+            frame_lista.grid(row=0, column=0, sticky="nsew")
+            frame_lista.grid_columnconfigure(0, weight=1)
+            frame_lista.grid_rowconfigure(0, weight=1)
+            self._frame_lista_por_processo[pid] = frame_lista
+
+            scroll = ctk.CTkScrollableFrame(frame_lista)
+            scroll.grid(row=0, column=0, sticky="nsew", padx=4, pady=(4, 0))
+            self._frame_scroll_por_processo[pid] = scroll
+
+            barra = ctk.CTkFrame(frame_lista, fg_color="transparent")
+            barra.grid(row=1, column=0, sticky="ew", padx=4, pady=(4, 6))
+            self._barra_por_processo[pid] = barra
+
+            ctk.CTkButton(
+                barra, text="Selecionar todas", width=140, height=28,
+                font=ctk.CTkFont(size=11),
+                command=lambda p=pid: self._marcar_todas_ies_processo(p),
+            ).pack(side="left", padx=(0, 6))
+            ctk.CTkButton(
+                barra, text="Desmarcar todas", width=130, height=28,
+                font=ctk.CTkFont(size=11),
+                command=lambda p=pid: self._desmarcar_todas_ies_processo(p),
+            ).pack(side="left", padx=(0, 6))
+            lbl_cont = ctk.CTkLabel(
+                barra, text="Selecionadas: 0",
+                font=ctk.CTkFont(size=11), text_color="gray",
+            )
+            lbl_cont.pack(side="left", padx=8)
+            self._lbl_contador_por_processo[pid] = lbl_cont
+
+            vars_list: list[tuple[dict[str, object], ctk.BooleanVar]] = []
+            for item in itens_processo:
+                ie = _ie_para_exibicao(item.get("ie") or item.get("ie_digitos") or "")
+                val_atc = item.get("valor_atc")
+                val_difal = item.get("valor_difal")
+                atc_txt = (
+                    f"{val_atc:.2f}"
+                    if isinstance(val_atc, (int, float))
+                    else (str(val_atc) if val_atc is not None else "—")
+                )
+                difal_txt = (
+                    f"{val_difal:.2f}"
+                    if isinstance(val_difal, (int, float))
+                    else (str(val_difal) if val_difal is not None else "—")
+                )
+                var = ctk.BooleanVar(value=True)
+                vars_list.append((item, var))
+                row = ctk.CTkFrame(scroll, fg_color="transparent")
+                row.pack(fill="x", pady=1)
+                cb = ctk.CTkCheckBox(row, text="", variable=var, width=28)
+                cb.pack(side="left", padx=(0, 6), pady=3)
+                var.trace_add("write", lambda *_, proc=pid: self._atualizar_contador_selecao())
+                ctk.CTkLabel(
+                    row, text=ie,
+                    font=ctk.CTkFont(family="Consolas", size=12), width=110,
+                ).pack(side="left", padx=4, pady=3)
+                ctk.CTkLabel(
+                    row, text=atc_txt,
+                    font=ctk.CTkFont(family="Consolas", size=12), width=80,
+                ).pack(side="left", padx=4, pady=3)
+                ctk.CTkLabel(
+                    row, text=difal_txt,
+                    font=ctk.CTkFont(family="Consolas", size=12), width=80,
+                ).pack(side="left", padx=4, pady=3)
+            self._selecao_por_processo[pid] = vars_list
+            n = sum(1 for _, v in vars_list if v.get())
+            self._lbl_contador_por_processo[pid].configure(text=f"Selecionadas: {n}")
+
+        for f in self._frame_lista_por_processo.values():
+            f.grid_remove()
+
+    def _itens_executaveis_para_processo(self, pid: str) -> list[dict[str, object]]:
+        """Retorna os itens que têm valor/critério para o processo (para montar a lista)."""
+        if pid == "antecipado":
+            return [
+                item for item in self._lista_dados
+                if not _valor_atc_invalido(item.get("valor_atc"))
+            ]
+        if pid == "difal":
+            return [
+                item for item in self._lista_dados
+                if not _valor_difal_invalido(item.get("valor_difal"))
+            ]
+        if pid == "normal":
+            return []  # sem critério/valor Normal ainda
+        return []
+
+    def _marcar_todas_ies_processo(self, pid: str) -> None:
+        for _, var in self._selecao_por_processo.get(pid, []):
             var.set(True)
 
-    def _desmarcar_todas_ies(self) -> None:
-        for _, var in self._vars_selecao:
+    def _desmarcar_todas_ies_processo(self, pid: str) -> None:
+        for _, var in self._selecao_por_processo.get(pid, []):
             var.set(False)
 
     def _atualizar_contador_selecao(self) -> None:
-        n = sum(1 for _, var in self._vars_selecao if var.get())
-        self._lbl_contador_selecao.configure(text=f"Selecionadas: {n}")
+        pid = self._processo_selecao_visivel
+        n = sum(
+            1 for _, var in self._selecao_por_processo.get(pid, [])
+            if var.get()
+        )
+        if pid in self._lbl_contador_por_processo:
+            self._lbl_contador_por_processo[pid].configure(text=f"Selecionadas: {n}")
+
+    def _atualizar_resumo_e_tabela_processos(self) -> None:
+        """Atualiza contagem Executáveis/Ignoradas e tabela de IEs quando a seleção de processos muda."""
+        if not self._lista_dados:
+            return
+        processos_ativos = [p for p, var in self._vars_processos.items() if var.get()]
+        processos_ativos = processos_ativos or ["antecipado", "difal"]
+        qtd_exec, qtd_ign = _contar_executaveis_ignoradas(
+            self._lista_dados, processos_ativos
+        )
+        self._lbl_exec.configure(text=str(qtd_exec))
+        self._lbl_ignor.configure(text=str(qtd_ign))
+        self._btn_executar.configure(state="normal" if qtd_exec > 0 else "disabled")
+        self._preencher_tabela_ies()
+        if self._modo_ies == self._MODO_SELECAO:
+            self._atualizar_seletor_processos_selecao()
+            self._mostrar_lista_do_processo(self._processo_selecao_visivel)
 
     # ------------------------------------------------------------------
     # Ações
@@ -613,7 +785,11 @@ class App(ctk.CTk):
             self._status("Falha ao carregar planilha")
             return
 
-        qtd_exec, qtd_ign = _contar_executaveis_ignoradas(self._lista_dados)
+        processos_ativos = [pid for pid, var in self._vars_processos.items() if var.get()]
+        qtd_exec, qtd_ign = _contar_executaveis_ignoradas(
+            self._lista_dados,
+            processos_ativos if processos_ativos else ["antecipado", "difal"],
+        )
         total = len(self._lista_dados)
 
         self._lbl_periodo.configure(text=f"{self._mes_ref:02d}/{self._ano_ref}")
@@ -645,21 +821,32 @@ class App(ctk.CTk):
         self._textbox_ies.configure(state="normal")
         self._textbox_ies.delete("1.0", "end")
 
-        header = f"{'#':>4}  {'I.E.':>12}  {'Valor ATC':>14}  {'Status'}\n"
-        sep = "─" * 50 + "\n"
+        # Status por processo: colunas ATC e DIFAL (pendente / —)
+        header = (
+            f"{'#':>4}  {'I.E.':>12}  {'Valor ATC':>14}  {'DIF. ALIQUOTA':>14}  {'ATC':>8}  {'DIFAL':>8}\n"
+        )
+        sep = "─" * 72 + "\n"
         self._textbox_ies.insert("end", header)
         self._textbox_ies.insert("end", sep)
 
         for idx, item in enumerate(self._lista_dados, 1):
             ie = _ie_para_exibicao(str(item.get("ie", "")))
-            valor = item.get("valor_atc")
-            if _valor_atc_invalido(valor):
-                val_str = "—"
-                status = "ignorada"
+            valor_atc = item.get("valor_atc")
+            valor_difal = item.get("valor_difal")
+            if _valor_atc_invalido(valor_atc):
+                atc_str = "—"
             else:
-                val_str = f"R$ {float(valor):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                status = "pendente"
-            self._textbox_ies.insert("end", f"{idx:>4}  {ie:>12}  {val_str:>14}  {status}\n")
+                atc_str = f"R$ {float(valor_atc):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            if _valor_difal_invalido(valor_difal):
+                difal_str = "—"
+            else:
+                difal_str = f"R$ {float(valor_difal):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            status_atc = "pendente" if not _valor_atc_invalido(valor_atc) else "ignorada"
+            status_difal = "pendente" if not _valor_difal_invalido(valor_difal) else "ignorada"
+            self._textbox_ies.insert(
+                "end",
+                f"{idx:>4}  {ie:>12}  {atc_str:>14}  {difal_str:>14}  {status_atc:>8}  {status_difal:>8}\n",
+            )
 
         self._textbox_ies.configure(state="disabled")
 
@@ -683,20 +870,30 @@ class App(ctk.CTk):
             return
 
         if self._modo_ies == self._MODO_SELECAO:
-            lista = [item for item, var in self._vars_selecao if var.get()]
-            if not lista:
-                messagebox.showwarning("Aviso", "Nenhuma I.E. selecionada.")
+            lista_por_processo = {
+                pid: [item for (item, var) in self._selecao_por_processo.get(pid, []) if var.get()]
+                for pid in processos
+            }
+            total_selecionadas = sum(len(lst) for lst in lista_por_processo.values())
+            if total_selecionadas == 0:
+                messagebox.showwarning(
+                    "Aviso",
+                    "Nenhuma I.E. selecionada nas listas dos processos. "
+                    "Escolha o processo (ATC / Normal / DIFAL) e marque as IEs desejadas.",
+                )
                 return
-            descricao_qtd = f"{len(lista)} IE(s) selecionada(s)"
+            descricao_qtd = f"{total_selecionadas} IE(s) selecionada(s) nos processos"
         else:
+            lista_por_processo = None
             lista = [
                 item for item in self._lista_dados
-                if not _valor_atc_invalido(item.get("valor_atc"))
+                if any(_item_executavel_para_processo(item, p) for p in processos)
             ]
             if not lista:
                 messagebox.showwarning(
                     "Aviso",
-                    "Nenhuma I.E. com valor ATC. Alterne para 'Selecionar IEs' para ver o detalhamento.",
+                    "Nenhuma I.E. com valor para o(s) processo(s) selecionado(s). "
+                    "Alterne para 'Selecionar IEs' para ver o detalhamento.",
                 )
                 return
             descricao_qtd = f"{len(lista)} IE(s) executável(is)"
@@ -723,10 +920,17 @@ class App(ctk.CTk):
         def _ao_finalizar(ies_ok: list[str], ies_erro: list[tuple[str, str]]) -> None:
             self.after(0, self._finalizar_execucao, ies_ok, ies_erro)
 
-        _executar_lote_em_background(
-            lista, processos,
-            self._var_headless.get(), result_callback=_ao_finalizar,
-        )
+        if self._modo_ies == self._MODO_SELECAO and lista_por_processo is not None:
+            _executar_lote_em_background(
+                [], processos,
+                self._var_headless.get(), result_callback=_ao_finalizar,
+                lista_por_processo=lista_por_processo,
+            )
+        else:
+            _executar_lote_em_background(
+                lista, processos,
+                self._var_headless.get(), result_callback=_ao_finalizar,
+            )
 
     def _finalizar_execucao(
         self, ies_ok: list[str], ies_erro: list[tuple[str, str]],

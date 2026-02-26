@@ -1,4 +1,4 @@
-"""Extração de dados de planilhas Excel de filiais (formato ICMS-PI: ATC, NORMAL, DIFAL)."""
+"""Extração de dados de planilhas Excel de filiais (formato ICMS-PI: ATC, Normal, DIFAL). Inclui colunas ATC e DIF. ALIQUOTA."""
 
 import re
 import unicodedata
@@ -302,10 +302,8 @@ def obter_dados_para_dae(
     ano_ref: int,
 ) -> list[dict[str, object]]:
     """
-    A partir da lista de linhas completas, retorna apenas os dados necessários para a DAE:
-    - ie_normalizada
-    - valor_atc
-    - mes_ref, ano_ref
+    A partir da lista de linhas completas, retorna os dados necessários para a DAE:
+    ie, ie_digitos, valor_atc, valor_difal (DIF. ALIQUOTA), mes_ref, ano_ref.
     """
     chave_ie = _obter_chave_ie(nome_para_indice)
     if chave_ie is None:
@@ -313,11 +311,15 @@ def obter_dados_para_dae(
 
     lista: list[dict[str, object]] = []
     for dados in linhas:
+        ie_norm = dados.get("ie_normalizada", "")
         valor_atc = _obter_valor_atc(dados)
+        valor_difal = _obter_valor_difal(dados)
         lista.append(
             {
-                "ie": dados.get("ie_normalizada", ""),
+                "ie": ie_norm,
+                "ie_digitos": ie_norm,
                 "valor_atc": valor_atc,
+                "valor_difal": valor_difal,
                 "mes_ref": mes_ref,
                 "ano_ref": ano_ref,
                 "dados_originais": dados,
@@ -338,10 +340,31 @@ def _obter_chave_ie(nome_para_indice: dict[str, int]) -> str | None:
 def _obter_valor_atc(dados: dict[str, object]) -> float | None:
     """
     Retorna o valor da coluna ATC (valor principal) a partir dos dados de uma linha.
-    Implementação simples: procura uma chave que contenha 'ATC' no nome.
+    Procura uma chave que contenha 'ATC' no nome.
     """
     for chave, valor in dados.items():
         if isinstance(chave, str) and "atc" in chave.lower():
+            if isinstance(valor, (int, float)):
+                return float(valor)
+            if isinstance(valor, str):
+                s = valor.strip().replace(".", "").replace(",", ".")
+                try:
+                    return float(s)
+                except ValueError:
+                    continue
+    return None
+
+
+def _obter_valor_difal(dados: dict[str, object]) -> float | None:
+    """
+    Retorna o valor da coluna DIF. ALIQUOTA (diferencial de alíquota) a partir dos dados de uma linha.
+    Procura chave que contenha 'dif' e 'aliquota' no nome (ex.: "DIF. ALIQUOTA").
+    """
+    for chave, valor in dados.items():
+        if not isinstance(chave, str):
+            continue
+        c = chave.lower()
+        if "dif" in c and "aliquota" in c:
             if isinstance(valor, (int, float)):
                 return float(valor)
             if isinstance(valor, str):

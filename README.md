@@ -7,8 +7,8 @@ Automação para processos de **ICMS** no portal DAR Web da SEFAZ-PI: **ATC** (A
 ## Visão geral
 
 - **Interface gráfica** (CustomTkinter): carregar planilha Excel, visualizar I.E.s e valores, selecionar quais executar e rodar em lote.
-- **Planilha**: colunas de Inscrição Estadual e ATC; extração automática de período e dados para DAR.
-- **Processos**: ATC (113011) em uso; Normal e Difal em desenvolvimento.
+- **Planilha**: deve conter colunas de Inscrição Estadual e valores de **ATC**, **Normal** e **Difal**; o sistema extrai automaticamente o período e os dados para preenchimento da DAR.
+- **Processos**: ATC (113011); DIFAL (113001 – Imposto, Juros e Multa); Normal em desenvolvimento.
 
 ---
 
@@ -24,7 +24,7 @@ Automação para processos de **ICMS** no portal DAR Web da SEFAZ-PI: **ATC** (A
 | **`src/icms_pi/`** | Comando central: GUI, extração Excel e logger; orquestra ATC, Normal e Difal. |
 | **`src/atc/`** | Automação do ICMS Antecipado (código 113011). |
 | **`src/normal/`** | ICMS Normal — em construção. |
-| **`src/difal/`** | ICMS Difal — em construção. |
+| **`src/difal/`** | Automação do ICMS DIFAL (código 113001, valor DIF. ALIQUOTA). |
 
 ---
 
@@ -34,7 +34,7 @@ Automação para processos de **ICMS** no portal DAR Web da SEFAZ-PI: **ATC** (A
 |--------|-----------|--------|
 | **ATC** (Antecipado) | Fluxo 113011 no DAR Web, passo a passo e automação. | [→ `src/atc/README.md`](src/atc/README.md) |
 | **Normal** | ICMS Normal PI. | [→ `src/normal/README.md`](src/normal/README.md) |
-| **Difal** | ICMS Difal PI. | [→ `src/difal/README.md`](src/difal/README.md) |
+| **Difal** (113001) | DIFAL – Imposto, Juros e Multa (valor DIF. ALIQUOTA). | [→ `src/difal/README.md`](src/difal/README.md) |
 
 ---
 
