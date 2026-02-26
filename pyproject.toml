@@ -16,11 +16,11 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project.scripts]
-icms-atc-pi = "sefaz_pi.gui_app:main"
+icms_pi = "icms_pi.gui_app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["sefaz_pi*"]
+include = ["atc*", "icms_pi*"]
 
 [tool.uv]
 dev-dependencies = []

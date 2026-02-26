@@ -7,8 +7,8 @@ from pathlib import Path
 
 from playwright.async_api import Page
 
-from sefaz_pi import configuracoes
-from sefaz_pi.logger import configurar_logger_da_aplicacao
+from icms_pi import configuracoes
+from icms_pi.logger import configurar_logger_da_aplicacao
 
 logger = configurar_logger_da_aplicacao(__name__)
 

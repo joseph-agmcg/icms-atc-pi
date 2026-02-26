@@ -9,9 +9,10 @@ from datetime import date, datetime
 
 from playwright.async_api import async_playwright, Browser, Page, BrowserContext
 
-from sefaz_pi import configuracoes
-from sefaz_pi.logger import configurar_logger_da_aplicacao
-from sefaz_pi.navegacao.acoes_pagina import (
+from icms_pi import configuracoes
+from atc import configuracoes as configuracoes_atc
+from icms_pi.logger import configurar_logger_da_aplicacao
+from atc.navegacao.acoes_pagina import (
     aguardar_pagina_carregar,
     preencher_campo_data_mascarado,
     preencher_campo_valor_mascarado,
@@ -97,7 +98,7 @@ class AutomacaoAntecipacaoParcialPI:
 
     async def _clicar_menu_icms_pi(self) -> None:
         """Clica no link do menu ICMS (a.portalPanelLink com texto ICMS)."""
-        locator = self._pagina.locator(configuracoes.SELETOR_PI_MENU_ICMS).filter(
+        locator = self._pagina.locator(configuracoes_atc.SELETOR_PI_MENU_ICMS).filter(
             has_text="ICMS"
         )
         await locator.first.wait_for(
@@ -109,19 +110,19 @@ class AutomacaoAntecipacaoParcialPI:
 
     async def _selecionar_antecipacao_parcial_pi(self) -> None:
         """Seleciona a opção 113011 - ICMS – ANTECIPAÇÃO PARCIAL no select."""
-        select = self._pagina.locator(configuracoes.SELETOR_PI_SELECT_CODIGO)
+        select = self._pagina.locator(configuracoes_atc.SELETOR_PI_SELECT_CODIGO)
         await select.wait_for(
             state="visible", timeout=configuracoes.TIMEOUT_AGUARDAR_ELEMENTO_MS
         )
         await select.select_option(
-            label=configuracoes.VALOR_OPCAO_PI_ANTECIPACAO_PARCIAL
+            label=configuracoes_atc.VALOR_OPCAO_PI_ANTECIPACAO_PARCIAL
         )
         await aguardar_pagina_carregar(self._pagina)
         logger.debug("Selecionado: 113011 - ICMS Antecipado.")
 
     async def _clicar_botao_avancar_pi(self) -> None:
         """Clica no primeiro botão Avançar (span.ui-button-text) após selecionar o código."""
-        locator = self._pagina.locator(configuracoes.SELETOR_PI_BOTAO_AVANCAR).filter(
+        locator = self._pagina.locator(configuracoes_atc.SELETOR_PI_BOTAO_AVANCAR).filter(
             has_text="Avançar"
         )
         await locator.first.wait_for(
@@ -133,7 +134,7 @@ class AutomacaoAntecipacaoParcialPI:
 
     async def _preencher_ie_pi(self, ie_digitos: str) -> None:
         """Preenche o campo de Inscrição Estadual (#j_idt45)."""
-        campo = self._pagina.locator(configuracoes.SELETOR_PI_CAMPO_IE)
+        campo = self._pagina.locator(configuracoes_atc.SELETOR_PI_CAMPO_IE)
         await campo.wait_for(
             state="visible", timeout=configuracoes.TIMEOUT_AGUARDAR_ELEMENTO_MS
         )
@@ -144,7 +145,7 @@ class AutomacaoAntecipacaoParcialPI:
     async def _preencher_periodo_pi(self, mes_ref: int, ano_ref: int) -> None:
         """Preenche o período de referência (formato MM/AAAA)."""
         periodo_str = f"{mes_ref:02d}/{ano_ref}"
-        locator = self._pagina.locator(configuracoes.SELETOR_PI_PERIODO_REFERENCIA)
+        locator = self._pagina.locator(configuracoes_atc.SELETOR_PI_PERIODO_REFERENCIA)
         await locator.wait_for(
             state="visible", timeout=configuracoes.TIMEOUT_AGUARDAR_ELEMENTO_MS
         )
@@ -160,12 +161,12 @@ class AutomacaoAntecipacaoParcialPI:
         data_str = f"{dia:02d}/{mes:02d}/{ano}"
         await preencher_campo_data_mascarado(
             self._pagina,
-            configuracoes.SELETOR_PI_DATA_VENCIMENTO,
+            configuracoes_atc.SELETOR_PI_DATA_VENCIMENTO,
             data_str,
         )
         await preencher_campo_data_mascarado(
             self._pagina,
-            configuracoes.SELETOR_PI_DATA_PAGAMENTO,
+            configuracoes_atc.SELETOR_PI_DATA_PAGAMENTO,
             data_str,
         )
         logger.debug("Datas Vencimento e Pagamento preenchidas: %s", data_str)
@@ -177,7 +178,7 @@ class AutomacaoAntecipacaoParcialPI:
         """
         await preencher_campo_valor_mascarado(
             self._pagina,
-            configuracoes.SELETOR_PI_VALOR_PRINCIPAL,
+            configuracoes_atc.SELETOR_PI_VALOR_PRINCIPAL,
             valor_principal,
         )
         logger.debug("Valor principal preenchido: %s", valor_principal)
@@ -185,7 +186,7 @@ class AutomacaoAntecipacaoParcialPI:
     async def _clicar_botao_calcular_imposto_pi(self) -> None:
         """Clica no botão Calcular Imposto (span.ui-button-text) após preencher Valor Principal."""
         locator = self._pagina.locator(
-            configuracoes.SELETOR_PI_BOTAO_CALCULAR_IMPOSTO
+            configuracoes_atc.SELETOR_PI_BOTAO_CALCULAR_IMPOSTO
         ).filter(has_text="Calcular Imposto")
         await locator.first.wait_for(
             state="visible", timeout=configuracoes.TIMEOUT_AGUARDAR_ELEMENTO_MS

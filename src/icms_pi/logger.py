@@ -1,6 +1,8 @@
-"""
-Configuração centralizada do logging.
-Saída: terminal (INFO+) e arquivo em logs/ (DEBUG+) com timestamp no nome.
+"""Configuração centralizada de logging para o sistema ICMS-PI.
+
+Saída:
+- Terminal (nível INFO+)
+- Arquivo em ``logs/`` (nível DEBUG+) com timestamp no nome.
 """
 
 import logging
@@ -10,10 +12,7 @@ from pathlib import Path
 
 
 def configurar_logger_da_aplicacao(nome_do_modulo: str) -> logging.Logger:
-    """
-    Retorna um logger configurado para o módulo.
-    Escreve no terminal em INFO+ e em arquivo .log em logs/ em DEBUG+.
-    """
+    """Retorna um logger configurado para o módulo informado."""
     logger = logging.getLogger(nome_do_modulo)
 
     if logger.handlers:
@@ -25,7 +24,7 @@ def configurar_logger_da_aplicacao(nome_do_modulo: str) -> logging.Logger:
     pasta_logs = Path(__file__).resolve().parent.parent.parent / "logs"
     pasta_logs.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    arquivo_log = pasta_logs / f"icms_antecipado_pi_{timestamp}.log"
+    arquivo_log = pasta_logs / f"icms_pi_{timestamp}.log"
 
     formato_detalhado = logging.Formatter(
         "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
@@ -45,3 +44,4 @@ def configurar_logger_da_aplicacao(nome_do_modulo: str) -> logging.Logger:
 
     logger.debug("Logger configurado: arquivo=%s", arquivo_log)
     return logger
+
