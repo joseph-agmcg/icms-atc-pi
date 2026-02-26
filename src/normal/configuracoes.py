@@ -1,4 +1,4 @@
-"""Configurações específicas do processo ICMS Normal (Imposto, Juros e Multa): código 113000."""
+"""Configurações específicas do processo ICMS Normal (Apuração Normal): código 113000."""
 
 # --- SEFAZ-PI: ICMS Normal (DAR Web, 113000) ---
 

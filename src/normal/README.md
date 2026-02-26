@@ -1,4 +1,4 @@
-# ICMS Normal – Imposto, Juros e Multa (código 113000)
+# ICMS Normal – Apuração Normal (código 113000)
 
 Este documento descreve o **processo Normal** no portal DAR Web da **SEFAZ-PI**: fluxo manual, regras de negócio e como executar a automação.
 

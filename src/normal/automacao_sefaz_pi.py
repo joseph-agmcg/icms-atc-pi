@@ -1,5 +1,5 @@
 """
-Automação ICMS Normal / Imposto, Juros e Multa (SEFAZ-PI, DAR Web).
+Automação ICMS Normal / Apuração Normal (SEFAZ-PI, DAR Web).
 Orquestra o fluxo por I.E.: portal PI → Menu ICMS → código 113000 → IE, substituição NÃO,
 Avançar → preenche período, datas e valor principal (coluna NORMAL).
 """
@@ -52,7 +52,7 @@ def _data_vencimento_no_passado(mes_ref: int, ano_ref: int) -> bool:
 
 class AutomacaoNormalPI:
     """
-    Automação para ICMS Normal / Imposto, Juros e Multa (SEFAZ-PI, DAR Web).
+    Automação para ICMS Normal / Apuração Normal (SEFAZ-PI, DAR Web).
     Fluxo: portal PI → Menu ICMS → 113000 → IE, substituição tributária NÃO →
     Avançar → período, datas (dia 15), valor principal (coluna NORMAL) → Calcular Imposto.
     """

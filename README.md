@@ -1,6 +1,6 @@
 # ICMS-PI — Automação SEFAZ-PI
 
-Automação para processos de **ICMS** no portal DAR Web da SEFAZ-PI: **ATC** (Antecipação Parcial), **Normal** (Imposto, Juros e Multa) e **DIFAL** (Diferencial de Alíquota — Imposto, Juros e Multa).
+Automação para processos de **ICMS** no portal DAR Web da SEFAZ-PI: **ATC** (Antecipação Parcial), **Normal** (Apuração Normal) e **DIFAL** (Diferencial de Alíquota — Imposto, Juros e Multa).
 
 ---
 
@@ -8,7 +8,7 @@ Automação para processos de **ICMS** no portal DAR Web da SEFAZ-PI: **ATC** (A
 
 - **Interface gráfica** (CustomTkinter): carregar planilha Excel, visualizar I.E. e valores, selecionar quais executar e rodar em lote.
 - **Planilha**: deve conter colunas de Inscrição Estadual e valores de **ATC**, **NORMAL** e **DIF. ALIQUOTA**; o sistema extrai automaticamente o período e os dados para preenchimento da DAR.
-- **Processos**: **ATC** (113011 – Antecipação Parcial); **Normal** (113000 – Imposto, Juros e Multa); **DIFAL** (113001 – Imposto, Juros e Multa, valor DIF. ALIQUOTA).
+- **Processos**: **ATC** (113011 – Antecipação Parcial); **Normal** (113000 – Apuração Normal); **DIFAL** (113001 – Imposto, Juros e Multa, valor DIF. ALIQUOTA).
 
 ---
 
@@ -33,7 +33,7 @@ Automação para processos de **ICMS** no portal DAR Web da SEFAZ-PI: **ATC** (A
 | Módulo | Descrição | README |
 |--------|-----------|--------|
 | **ATC** (113011) | ICMS Antecipação Parcial — fluxo no DAR Web, passo a passo e automação. | [`src/atc/README.md`](src/atc/README.md) |
-| **Normal** (113000) | ICMS Normal — Imposto, Juros e Multa; fluxo no DAR Web, passo a passo e automação. | [`src/normal/README.md`](src/normal/README.md) |
+| **Normal** (113000) | ICMS Normal — Apuração Normal; fluxo no DAR Web, passo a passo e automação. | [`src/normal/README.md`](src/normal/README.md) |
 | **DIFAL** (113001) | ICMS DIFAL — Imposto, Juros e Multa (valor DIF. ALIQUOTA); fluxo no DAR Web, passo a passo e automação. | [`src/difal/README.md`](src/difal/README.md) |
 
 ---
