@@ -11,10 +11,10 @@ from icms_pi.logger import configurar_logger_da_aplicacao
 
 logger = configurar_logger_da_aplicacao(__name__)
 
-# Nome exato da coluna I.E. no Excel (estilo icms.xlsx). Outras variações aceitas abaixo.
+# Coluna I.E.
 NOME_COLUNA_IE = "INSC.ESTADUAL"
 
-# Outros nomes aceitos para a coluna I.E. (planilhas em outros formatos)
+# Sinônimos coluna I.E.
 SINONIMOS_IE = (
     "INSC.ESTADUAL",
     "INSC. ESTADUAL",
@@ -28,11 +28,11 @@ SINONIMOS_IE = (
 # Número máximo de linhas a varrer para encontrar o cabeçalho
 MAX_LINHAS_BUSCA_CABECALHO = 25
 
-# Linhas e colunas da área do título onde pode estar o período (ex.: 1/1/2026 ou jan-26)
+# Área do título (período)
 MAX_LINHAS_BUSCA_PERIODO = 12
 MAX_COLUNAS_BUSCA_PERIODO = 30
 
-# Meses em português (formato jan-26, jan/26, etc.)
+# Meses abrev
 MESES_ABREV = {
     "jan": 1,
     "fev": 2,
@@ -48,7 +48,7 @@ MESES_ABREV = {
     "dez": 12,
 }
 
-# Número de dígitos da I.E. no Piauí (preenchimento com zeros à esquerda quando faltar)
+# Dígitos I.E. Piauí
 DIGITOS_IE_PI = 9
 
 

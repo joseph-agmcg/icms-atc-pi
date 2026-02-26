@@ -9,7 +9,7 @@ Este documento descreve o **processo Normal** no portal DAR Web da **SEFAZ-PI**:
 ## Passo a passo do processo manual que a automação substitui
 
 1. Acessar no navegador o portal DAR Web da SEFAZ-PI (`https://webas.sefaz.pi.gov.br/darweb/faces/views/index.xhtml`).
-2. Clicar no **Menu ICMS** e, na tela de seleção, escolher **113000 - ICMS - IMPOSTO, JUROS E MULTA** e clicar em **Avançar**.
+2. Clicar no **Menu ICMS** e, na tela de seleção, escolher **113000 - ICMS - APURAÇÃO NORMAL** e clicar em **Avançar**.
 3. Informar a **Inscrição Estadual** no campo `#fieldInscricaoEstadual`, selecionar **Substituição Tributária: Não** (`cmbSubstituicao`) e clicar em **Avançar**.
 4. No formulário "Cálculos do Imposto", preencher **período de referência** (mês/ano), **data de vencimento**, **data de pagamento** (ex.: dia 15 do mês de referência) e **valor principal** (coluna **NORMAL** da planilha).
 5. Clicar em **Calcular Imposto**.
@@ -40,7 +40,7 @@ Vídeo mostrando o bot em execução (carregando Excel, preenchendo o portal e r
 ## O que a automação faz
 
 - Acessa o portal DAR Web da SEFAZ-PI (mesma URL do ATC e DIFAL).
-- Para cada I.E. da planilha com valor na coluna **NORMAL**: clica no **Menu ICMS**, seleciona **113000 - ICMS - IMPOSTO, JUROS E MULTA**, clica em **Avançar**, preenche a **I.E.** em `#fieldInscricaoEstadual`, seleciona **Substituição Tributária: Não**, clica em **Avançar**, preenche **período de referência**, **data de vencimento**, **data de pagamento** (dia 15 do mês de referência) e **valor principal** (coluna NORMAL) e clica em **Calcular Imposto**.
+- Para cada I.E. da planilha com valor na coluna **NORMAL**: clica no **Menu ICMS**, seleciona **113000 - ICMS - APURAÇÃO NORMAL**, clica em **Avançar**, preenche a **I.E.** em `#fieldInscricaoEstadual`, seleciona **Substituição Tributária: Não**, clica em **Avançar**, preenche **período de referência**, **data de vencimento**, **data de pagamento** (dia 15 do mês de referência) e **valor principal** (coluna NORMAL) e clica em **Calcular Imposto**.
 - Permite carregar um Excel de filiais (coluna I.E. e coluna **NORMAL**), visualizar os dados extraídos (incluindo Valor ATC, NORMAL e DIF. ALIQUOTA), escolher quais I.E. executar e rodar o fluxo em lote (junto ou separado do ATC e DIFAL).
 - Trata **datas passadas**: se a data de vencimento (dia 15 do mês de referência) já passou, a I.E. é ignorada e registrada com motivo do descarte.
 - Em erro: registra log e salva screenshot na pasta de erros configurada.

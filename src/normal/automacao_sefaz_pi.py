@@ -109,7 +109,7 @@ class AutomacaoNormalPI:
         logger.debug("Clicado no menu ICMS.")
 
     async def _selecionar_imposto_juros_multa_pi(self) -> None:
-        """Seleciona a opção 113000 - ICMS - IMPOSTO, JUROS E MULTA no select."""
+        """Seleciona a opção 113000 - ICMS - APURAÇÃO NORMAL no select."""
         select = self._pagina.locator(configuracoes_normal.SELETOR_PI_SELECT_CODIGO)
         await select.wait_for(
             state="visible", timeout=configuracoes.TIMEOUT_AGUARDAR_ELEMENTO_MS
@@ -118,7 +118,7 @@ class AutomacaoNormalPI:
             label=configuracoes_normal.VALOR_OPCAO_PI_IMPOSTO_JUROS_MULTA
         )
         await aguardar_pagina_carregar(self._pagina)
-        logger.debug("Selecionado: 113000 - ICMS Imposto, Juros e Multa.")
+        logger.debug("Selecionado: 113000 - ICMS - APURAÇÃO NORMAL.")
 
     async def _clicar_botao_avancar_pi(self) -> None:
         """Clica no botão Avançar (mesmo seletor do ATC)."""

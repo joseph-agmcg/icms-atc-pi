@@ -13,7 +13,7 @@ load_dotenv()
 # --- URL do portal ---
 URL_PORTAL_DARWEB_SEFAZ_PI = "https://webas.sefaz.pi.gov.br/darweb/faces/views/index.xhtml"
 
-# --- Timeouts (milissegundos) ---
+# --- Timeouts ---
 TIMEOUT_PAGINA_CARREGAR_MS = 30_000
 TIMEOUT_AGUARDAR_ELEMENTO_MS = 15_000
 
@@ -21,7 +21,7 @@ TIMEOUT_AGUARDAR_ELEMENTO_MS = 15_000
 INTERVALO_ENTRE_EXECUCOES_MS = 10_000
 QUANTIDADE_POR_VEZ = 1
 
-# --- Pastas (variáveis de ambiente) ---
+# --- Pastas ---
 PASTA_SAIDA_RESULTADOS = os.getenv("PASTA_SAIDA_RESULTADOS", "resultados")
 PASTA_CAPTURAS_DE_TELA_ERROS = os.getenv("PASTA_CAPTURAS_DE_TELA_ERROS", "capturas_erros")
 
