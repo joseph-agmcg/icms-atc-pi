@@ -20,7 +20,7 @@ icms_pi = "icms_pi.gui_app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["atc*", "icms_pi*"]
+include = ["atc*", "difal*", "icms_pi*", "normal*"]
 
 [tool.uv]
 dev-dependencies = []

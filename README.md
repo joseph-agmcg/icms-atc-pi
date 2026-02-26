@@ -16,7 +16,7 @@ Automação para processos de **ICMS** no portal DAR Web da SEFAZ-PI: **ATC** (A
 
 | Pasta/Arquivo | Função |
 |---------------|--------|
-| **`pyproject.toml`** | Metadados do projeto (nome, versão, entrypoint `icms_pi`). |
+| **`pyproject.toml`** | Metadados do projeto (nome, versão, dependências). |
 | **`requirements.txt`** | Dependências para `pip install -r requirements.txt`. |
 | **`.env`** | Variáveis sensíveis. **Não commitar.** |
 | **`.env.example`** | Exemplo do `.env` sem valores reais. |
@@ -41,10 +41,9 @@ Automação para processos de **ICMS** no portal DAR Web da SEFAZ-PI: **ATC** (A
 ## Como rodar
 
 1. Configurar `.env` a partir de `.env.example`.
-2. Instalar dependências: `pip install -r requirements.txt` (ou `pip install -e .`).
+2. Instalar dependências: `pip install -r requirements.txt`.
 3. Abrir a GUI:
    ```bash
    python -m icms_pi.gui_app
    ```
-   Com o projeto instalado em modo editável (`pip install -e .`), também: `icms_pi`.
 4. Na interface: selecionar a planilha Excel, revisar I.E. e executar o processo desejado (ATC, Normal ou DIFAL).

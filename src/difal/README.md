@@ -74,8 +74,6 @@ Vídeo mostrando o bot em execução (carregando Excel, preenchendo o portal e r
   python -m playwright install chromium
   ```
 
-O projeto pode ser instalado em modo editável para expor o comando `icms_pi` e facilitar o uso.
-
 ---
 
 ## Variáveis de ambiente necessárias
@@ -95,8 +93,8 @@ Copie `.env.example` para `.env` e preencha conforme necessário:
 
 A aplicação é executada pela **interface gráfica** (comando central do projeto). Veja no [README principal](../../README.md) a seção **Como rodar**.
 
-1. Na raiz do repositório: `pip install -e .` (ou `pip install -r requirements.txt`).
-2. Abrir a GUI: `python -m icms_pi.gui_app` (ou `icms_pi`, se instalado em modo editável).
+1. Na raiz do repositório: `pip install -r requirements.txt`.
+2. Abrir a GUI: `python -m icms_pi.gui_app`.
 3. Selecionar um arquivo `.xlsx` com coluna de Inscrição Estadual (ex.: "INSC.ESTADUAL") e coluna **DIF. ALIQUOTA**.
 4. Usar **Ver dados extraídos** para conferir a extração.
 5. Na interface: escolher o processo **ICMS Difal PI**, revisar I.E.s e executar o fluxo em lote (todas ou algumas I.E.).
